@@ -1,10 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Linq;
 using System.Reflection;
-using System.Collections.Generic;
 
 public class Program
 {
@@ -22,8 +19,16 @@ public class Program
 
         var configuration = services.BuildServiceProvider().GetService<IConfiguration>();
 
-        services.AddDbContext<MyDbContext>(options =>
-            options.UseMySql(configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33))));
+        if (configuration != null)
+        {
+            services.AddDbContext<MyDbContext>(options =>
+                options.UseMySql(configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33))));
+        }
+        else
+        {
+            Console.WriteLine("Configuration is null. Unable to get the connection string.");
+            return;
+        }
 
         var provider = services.BuildServiceProvider();
 
@@ -42,7 +47,16 @@ public class Program
         {
             Console.Write("(UWUSER Console) ");
             var input = Console.ReadLine();
-            var command = input.Split(' ')[0];
+            var command = "";
+            if (input != null)
+            {
+                command = input.Split(' ')[0];
+            }
+            else
+            {
+                Console.WriteLine("Input is null. Please provide valid input.");
+                return;
+            }
             var arguments = input.Substring(command.Length).Trim().Split(' ');
 
             switch (command)
@@ -109,9 +123,16 @@ public class Program
 
         try
         {
-            context.Add(instance);
-            context.SaveChanges();
-            Console.WriteLine($"{className} created with ID {((dynamic)instance).Id}");
+            if (instance != null)
+            {
+                context.Add(instance);
+                context.SaveChanges();
+                Console.WriteLine($"{className} created with ID {((dynamic)instance).Id}");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to create {className} instance.");
+            }
         }
         catch (Exception ex)
         {

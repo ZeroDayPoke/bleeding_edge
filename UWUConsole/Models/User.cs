@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Collections.Generic;
 
 public class User
 {
@@ -7,13 +6,13 @@ public class User
 
     [Required(ErrorMessage = "Username is required.")]
     [StringLength(50, ErrorMessage = "Username cannot be longer than 50 characters.")]
-    public string Username { get; set; }
+    public string? Username { get; set; }
 
     [Required(ErrorMessage = "Email is required.")]
-    public string Email { get; set; }
+    public string? Email { get; set; }
 
     [Required(ErrorMessage = "Password is required.")]
-    public string PasswordHash { get; set; }
+    public string? PasswordHash { get; set; }
 
     public string? Salt { get; set; }
 
@@ -42,7 +41,7 @@ public class Role
     [Required(ErrorMessage = "Role name is required.")]
     public RoleName Name { get; set; }
 
-    public List<UserRole> UserRoles { get; set; }
+    public List<UserRole>? UserRoles { get; set; }
 
     public override string ToString()
     {
@@ -53,7 +52,7 @@ public class Role
 public class UserRole
 {
     public int UserId { get; set; }
-    public User User { get; set; }
+    public User? User { get; set; }
     public int RoleId { get; set; }
-    public Role Role { get; set; }
+    public Role? Role { get; set; }
 }
