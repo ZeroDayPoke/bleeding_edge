@@ -117,7 +117,11 @@ public class Program
         }
 
         var className = arguments[0];
-        var id = Convert.ToInt32(arguments[1]);
+        if (!int.TryParse(arguments[1], out var id))
+        {
+            Console.WriteLine("Invalid ID. ID must be an integer.");
+            return;
+        }
 
         var classType = classDictionary[className];
         var instance = context.Find(classType, id);
