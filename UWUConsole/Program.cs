@@ -128,8 +128,18 @@ public class Program
                 return;
             }
 
+            object value;
+            if (property.PropertyType.IsEnum)
+            {
+                value = Enum.Parse(property.PropertyType, pair[1]);
+            }
+            else
+            {
+                value = Convert.ChangeType(pair[1], property.PropertyType);
+            }
+
             Console.WriteLine($"Setting property {pair[0]} to value {pair[1]}");
-            property.SetValue(instance, Convert.ChangeType(pair[1], property.PropertyType));
+            property.SetValue(instance, value);
         }
 
         try
