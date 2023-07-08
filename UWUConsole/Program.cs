@@ -196,11 +196,22 @@ public class Program
             return;
         }
 
-        var method = typeof(DbContext).GetMethod(nameof(DbContext.Set), BindingFlags.Public | BindingFlags.Instance);
-        var genericMethod = method.MakeGenericMethod(classType);
-        var set = genericMethod.Invoke(context, null);
+        var method = typeof(DbContext).GetMethod(nameof(DbContext.Set), BindingFlags.Public | BindingFlags.Instance, null, new Type[0], null);
+        if (method == null)
+        {
+            Console.WriteLine("Unable to get the Set method from DbContext.");
+            return;
+        }
 
-        foreach (var instance in (IEnumerable<object>)set)
+        var genericMethod = method.MakeGenericMethod(classType);
+        var set = genericMethod.Invoke(context, null) as IEnumerable<object>;
+        if (set == null)
+        {
+            Console.WriteLine($"Unable to get entities of type {className}.");
+            return;
+        }
+
+        foreach (var instance in set)
         {
             Console.WriteLine(instance);
         }

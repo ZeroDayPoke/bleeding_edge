@@ -15,6 +15,10 @@ public class MyDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Role>()
+            .Property(e => e.Name)
+            .HasConversion<string>();
+
         modelBuilder.Entity<UserRole>()
             .HasKey(ur => new { ur.UserId, ur.RoleId });
 
