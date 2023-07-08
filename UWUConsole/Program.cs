@@ -19,7 +19,11 @@ public class Program
         var services = new ServiceCollection();
 
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddJsonFile("appsettings.json").Build());
-        services.AddDbContext<MyDbContext>();
+
+        var configuration = services.BuildServiceProvider().GetService<IConfiguration>();
+
+        services.AddDbContext<MyDbContext>(options =>
+            options.UseMySql(configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33))));
 
         var provider = services.BuildServiceProvider();
 
@@ -99,11 +103,27 @@ public class Program
                 return;
             }
 
-            property.SetValue(instance, Convert.ChangeType(pair[1], property.PropertyType));
+            try
+            {
+                property.SetValue(instance, Convert.ChangeType(pair[1], property.PropertyType));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting property value: {ex.Message}");
+                return;
+            }
         }
 
-        context.Add(instance);
-        context.SaveChanges();
+        try
+        {
+            context.Add(instance);
+            context.SaveChanges();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving changes: {ex.Message}");
+            return;
+        }
 
         Console.WriteLine($"{className} created with ID {((dynamic)instance).Id}");
     }
@@ -176,7 +196,7 @@ public class Program
             return;
         }
 
-        var method = typeof(MyDbContext).GetMethod(nameof(MyDbContext.Set));
+        var method = typeof(DbContext).GetMethod(nameof(DbContext.Set), BindingFlags.Public | BindingFlags.Instance);
         var genericMethod = method.MakeGenericMethod(classType);
         var set = genericMethod.Invoke(context, null);
 
