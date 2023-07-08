@@ -1,4 +1,7 @@
+using System;
+using System.Security.Cryptography;
 using System.ComponentModel.DataAnnotations;
+using BCrypt.Net;
 
 public class User
 {
@@ -21,6 +24,37 @@ public class User
     public bool IsEmailVerified { get; set; }
 
     public List<UserRole>? UserRoles { get; set; }
+
+    public void SetPassword(string password)
+    {
+        Salt = GenerateSalt();
+        PasswordHash = HashPassword(password, Salt);
+    }
+
+    public bool VerifyPassword(string password)
+    {
+        return PasswordHash != null && Salt != null && VerifyPassword(password, PasswordHash, Salt);
+    }
+
+    private string GenerateSalt()
+    {
+        byte[] saltBytes = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(saltBytes);
+        }
+        return Convert.ToBase64String(saltBytes);
+    }
+
+    private string HashPassword(string password, string salt)
+    {
+        return BCrypt.Net.BCrypt.HashPassword(password, salt, false, HashType.SHA384);
+    }
+
+    private bool VerifyPassword(string password, string hashedPassword, string salt)
+    {
+        return BCrypt.Net.BCrypt.Verify(password, hashedPassword);
+    }
 
     public override string ToString()
     {

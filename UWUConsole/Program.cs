@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using System.Security.Cryptography;
 
 public class Program
 {
@@ -85,6 +86,7 @@ public class Program
         }
     }
 
+
     private static void Create(MyDbContext context, string[] arguments)
     {
         if (arguments.Length < 2)
@@ -110,6 +112,12 @@ public class Program
                 return;
             }
 
+            if (pair[0] == "Password" && instance is User user)
+            {
+                user.SetPassword(pair[1]);
+                continue;
+            }
+
             var property = classType.GetProperty(pair[0]);
             if (property == null)
             {
@@ -117,7 +125,7 @@ public class Program
                 return;
             }
 
-            Console.WriteLine($"Setting property {pair[0]} to value {pair[1]}");  // Add this line
+            Console.WriteLine($"Setting property {pair[0]} to value {pair[1]}");
             property.SetValue(instance, Convert.ChangeType(pair[1], property.PropertyType));
         }
 
@@ -142,6 +150,21 @@ public class Program
                 Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
             }
         }
+    }
+
+    private static string GenerateSalt()
+    {
+        byte[] saltBytes = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(saltBytes);
+        }
+        return Convert.ToBase64String(saltBytes);
+    }
+
+    private static string HashPassword(string password, string salt)
+    {
+        return BCrypt.Net.BCrypt.HashPassword(password, salt);
     }
 
 
