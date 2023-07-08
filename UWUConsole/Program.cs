@@ -31,9 +31,12 @@ public class Program
             return;
         }
 
+        services.AddTransient<IEmailService, EmailService>();
+
         var provider = services.BuildServiceProvider();
 
         using var context = provider.GetRequiredService<MyDbContext>();
+        var emailService = provider.GetRequiredService<IEmailService>();
 
         // Test the database connection
         if (!context.Database.CanConnect())
@@ -63,7 +66,7 @@ public class Program
             switch (command)
             {
                 case "create":
-                    Create(context, arguments);
+                    Create(context, arguments, emailService);
                     break;
                 case "show":
                     Show(context, arguments);
@@ -87,7 +90,7 @@ public class Program
     }
 
 
-    private static void Create(MyDbContext context, string[] arguments)
+    private static void Create(MyDbContext context, string[] arguments, IEmailService emailService)
     {
         if (arguments.Length < 2)
         {
@@ -135,6 +138,18 @@ public class Program
             {
                 context.Add(instance);
                 context.SaveChanges();
+
+                // If a User was created, send the verification email
+                if (instance is User user)
+                    try
+                    {
+                        emailService.SendVerificationEmail(user.Email, user.VerificationToken);
+                        Console.WriteLine($"Verification email sent to {user.Email}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to send verification email: {ex.Message}");
+                    }
                 Console.WriteLine($"{className} created with ID {((dynamic)instance).Id}");
             }
             else

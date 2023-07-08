@@ -19,7 +19,7 @@ public class User
 
     public string? Salt { get; set; }
 
-    public string? VerificationToken { get; set; }
+    public string VerificationToken { get; set; } = Guid.NewGuid().ToString();
 
     public bool IsEmailVerified { get; set; }
 
@@ -27,7 +27,7 @@ public class User
 
     public void SetPassword(string password)
     {
-        Salt = GenerateSalt();
+        Salt = BCrypt.Net.BCrypt.GenerateSalt();
         PasswordHash = HashPassword(password, Salt);
     }
 
@@ -60,33 +60,4 @@ public class User
     {
         return $"User: {Id}, {Username}, {Email}";
     }
-}
-
-public enum RoleName
-{
-    ADMIN,
-    GUEST
-}
-
-public class Role
-{
-    public int Id { get; set; }
-
-    [Required(ErrorMessage = "Role name is required.")]
-    public RoleName Name { get; set; }
-
-    public List<UserRole>? UserRoles { get; set; }
-
-    public override string ToString()
-    {
-        return $"Role: {Id} - {Name}";
-    }
-}
-
-public class UserRole
-{
-    public int UserId { get; set; }
-    public User? User { get; set; }
-    public int RoleId { get; set; }
-    public Role? Role { get; set; }
 }
