@@ -58,6 +58,7 @@ namespace UWUConsole.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("VerificationToken")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");

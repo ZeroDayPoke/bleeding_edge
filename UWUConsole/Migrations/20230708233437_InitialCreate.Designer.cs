@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace UWUConsole.Migrations
 {
     [DbContext(typeof(MyDbContext))]
-    [Migration("20230708204104_NullAbleTest")]
-    partial class NullAbleTest
+    [Migration("20230708233437_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -61,6 +61,7 @@ namespace UWUConsole.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("VerificationToken")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
