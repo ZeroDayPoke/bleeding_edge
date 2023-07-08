@@ -103,30 +103,26 @@ public class Program
                 return;
             }
 
-            try
-            {
-                property.SetValue(instance, Convert.ChangeType(pair[1], property.PropertyType));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error setting property value: {ex.Message}");
-                return;
-            }
+            Console.WriteLine($"Setting property {pair[0]} to value {pair[1]}");  // Add this line
+            property.SetValue(instance, Convert.ChangeType(pair[1], property.PropertyType));
         }
 
         try
         {
             context.Add(instance);
             context.SaveChanges();
+            Console.WriteLine($"{className} created with ID {((dynamic)instance).Id}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error saving changes: {ex.Message}");
-            return;
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+            }
         }
-
-        Console.WriteLine($"{className} created with ID {((dynamic)instance).Id}");
     }
+
 
     private static void Show(MyDbContext context, string[] arguments)
     {
