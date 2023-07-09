@@ -1,0 +1,36 @@
+# .NET Core build output
+bin/
+obj/
+
+# Visual Studio Code files
+.vscode/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio build output
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Visual Studio cache files
+*.ncrunch*
+*.[Cc]ache
+*.VC.db
+*.VC.VC.opendb
+
+# Others
+ClientApp/node_modules/
+setup/
+*settings*.json
+Properties/
