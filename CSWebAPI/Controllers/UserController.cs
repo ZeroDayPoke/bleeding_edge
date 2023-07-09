@@ -22,33 +22,53 @@ public class UserController : ControllerBase
     }
 
     // GET: api/User/5
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(int id)
+    [HttpGet("id/{id}")]
+    public async Task<ActionResult<User>> GetUserById(int id)
     {
         var user = await _userService.GetUserByIdAsync(id);
         if (user == null)
         {
             return NotFound();
         }
-        return Ok(user);
+        return user;
+    }
+
+    [HttpGet("username/{username}")]
+    public async Task<ActionResult<User>> GetUserByUsername(string username)
+    {
+        var user = await _userService.GetUserByUsernameAsync(username);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        return user;
     }
 
     // POST: api/User
     [HttpPost]
-    public async Task<IActionResult> Post([FromBody] User user)
+    public async Task<ActionResult<User>> Post(SignUpModel model)
     {
-        if (user.Username == null || user.PasswordHash == null)
+        if (!ModelState.IsValid)
         {
-            return BadRequest();
+            return BadRequest(ModelState);
         }
 
-        var newUser = await _userService.CreateUserAsync(user);
+        var newUser = await _userService.CreateUserAsync(new User
+        {
+            Username = model.Username,
+            Email = model.Email,
+            PasswordHash = model.Password,
+            VerificationToken = Guid.NewGuid().ToString()
+        });
+
         if (newUser == null)
         {
-            return BadRequest();
+            return BadRequest("An error occurred while creating the user.");
         }
-        return CreatedAtAction(nameof(Get), new { id = newUser.Id }, newUser);
+
+        return CreatedAtAction(nameof(GetUserById), new { id = newUser.Id }, newUser);
     }
+
 
     // PUT: api/User/5
     [HttpPut("{id}")]
@@ -90,6 +110,45 @@ public class UserController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    // POST: api/User/SignUp
+    [HttpPost("SignUp")]
+    public async Task<IActionResult> SignUp([FromBody] SignUpModel signUpModel)
+    {
+        if (signUpModel.Username == null || signUpModel.Password == null)
+        {
+            return BadRequest();
+        }
+
+        // Check if the username already exists
+        var existingUser = await _userService.GetUserByUsernameAsync(signUpModel.Username);
+        if (existingUser != null)
+        {
+            return Conflict("Username already exists");
+        }
+
+        // Create a new user object
+        User user = new User
+        {
+            Username = signUpModel.Username,
+            PasswordHash = signUpModel.Password,
+            Email = signUpModel.Email
+        };
+
+        var newUser = await _userService.CreateUserAsync(user);
+        if (newUser == null)
+        {
+            return BadRequest();
+        }
+
+        // Generate a JWT for the new user and return it
+        var token = await _userService.AuthenticateAsync(signUpModel.Username, signUpModel.Password);
+        if (token == null)
+        {
+            return Unauthorized();
+        }
+        return Ok(new { token });
     }
 
     // POST: api/User/Login
