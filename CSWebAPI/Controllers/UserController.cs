@@ -1,33 +1,35 @@
 // Controllers/UserController.cs
-
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 [Route("api/[controller]")]
 [ApiController]
 public class UserController : ControllerBase
 {
-    private readonly IDatabaseOperations _databaseOperations;
+    private readonly IUserService _userService;
 
-    public UserController(IDatabaseOperations databaseOperations)
+    public UserController(IUserService userService)
     {
-        _databaseOperations = databaseOperations;
+        _userService = userService;
     }
 
     // GET: api/User
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        await _databaseOperations.AllAsync(new string[] { "User" });
-        return Ok();
+        var users = await _userService.GetAllUsersAsync();
+        return Ok(users);
     }
 
     // GET: api/User/5
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(int id)
     {
-        await _databaseOperations.ShowAsync(new string[] { "User", id.ToString() });
-        return Ok();
+        var user = await _userService.GetUserByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        return Ok(user);
     }
 
     // POST: api/User
@@ -39,8 +41,8 @@ public class UserController : ControllerBase
             return BadRequest();
         }
 
-        await _databaseOperations.RegisterUserAsync(user.Username, user.PasswordHash);
-        return CreatedAtAction("Get", new { id = user.Id }, user);
+        var newUser = await _userService.CreateUserAsync(user);
+        return CreatedAtAction(nameof(Get), new { id = newUser.Id }, newUser);
     }
 
     // PUT: api/User/5
@@ -52,7 +54,7 @@ public class UserController : ControllerBase
             return BadRequest();
         }
 
-        await _databaseOperations.UpdateAsync(new string[] { "User", id.ToString(), $"Username={user.Username}", $"PasswordHash={user.PasswordHash}" });
+        await _userService.UpdateUserAsync(user);
         return NoContent();
     }
 
@@ -60,7 +62,7 @@ public class UserController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _databaseOperations.DestroyAsync(new string[] { "User", id.ToString() });
+        await _userService.DeleteUserAsync(id);
         return NoContent();
     }
 }

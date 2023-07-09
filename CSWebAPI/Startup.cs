@@ -24,17 +24,9 @@ public class Startup
         services.AddDbContext<MyDbContext>(options =>
             options.UseMySql(Configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33))));
 
-        services.AddSingleton(new Dictionary<string, Type>
-    {
-        { "User", typeof(User) },
-        { "Role", typeof(Role) }
-    });
-
         services.AddSingleton<IEmailService, EmailService>();
-        services.AddScoped<IDatabaseOperations, DatabaseOperations>();
-        services.AddSingleton<ICommandParser, CommandParser>();
+        services.AddScoped<IUserService, UserService>();
     }
-
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
