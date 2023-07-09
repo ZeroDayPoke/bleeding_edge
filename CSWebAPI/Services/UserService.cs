@@ -1,10 +1,8 @@
 // Services/UserService.cs
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 using System.Text;
-using System.Security.Cryptography;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -55,22 +53,7 @@ public class UserService : IUserService
     {
         if (_context.Users != null)
         {
-            byte[] salt = new byte[128 / 8];
-            using (var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(salt);
-            }
-
-            var hashedPassword = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                password: user.PasswordHash ?? string.Empty,
-                salt: salt,
-                prf: KeyDerivationPrf.HMACSHA1,
-                iterationCount: 10000,
-                numBytesRequested: 256 / 8));
-
-            user.PasswordHash = hashedPassword;
-            user.Salt = Convert.ToBase64String(salt);
-
+            user.SetPassword(user.PasswordHash ?? string.Empty);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
@@ -83,6 +66,7 @@ public class UserService : IUserService
         }
         return null;
     }
+
 
     public async Task UpdateUserAsync(User user)
     {
@@ -121,26 +105,12 @@ public class UserService : IUserService
             return false;
         }
 
-        var oldPasswordHash = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-            password: changePasswordModel.OldPassword,
-            salt: Encoding.UTF8.GetBytes(user.Salt),
-            prf: KeyDerivationPrf.HMACSHA1,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8));
-
-        if (oldPasswordHash != user.PasswordHash)
+        if (!user.VerifyPassword(changePasswordModel.OldPassword))
         {
             return false;
         }
 
-        var newPasswordHash = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-            password: changePasswordModel.NewPassword,
-            salt: Encoding.UTF8.GetBytes(user.Salt),
-            prf: KeyDerivationPrf.HMACSHA1,
-            iterationCount: 10000,
-            numBytesRequested: 256 / 8));
-
-        user.PasswordHash = newPasswordHash;
+        user.SetPassword(changePasswordModel.NewPassword);
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
 
@@ -153,12 +123,7 @@ public class UserService : IUserService
         if (_context.Users != null)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null || user.Salt == null || Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                    password: password,
-                    salt: Convert.FromBase64String(user.Salt),
-                    prf: KeyDerivationPrf.HMACSHA1,
-                    iterationCount: 10000,
-                    numBytesRequested: 256 / 8)) != user.PasswordHash)
+            if (user == null || !user.VerifyPassword(password))
             {
                 return null;
             }

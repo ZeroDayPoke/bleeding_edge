@@ -1,4 +1,5 @@
-using System;
+// Models/User.cs
+
 using System.Security.Cryptography;
 using System.ComponentModel.DataAnnotations;
 using BCrypt.Net;
