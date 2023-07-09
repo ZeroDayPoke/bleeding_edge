@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 
 public class Startup
 {
@@ -19,14 +21,20 @@ public class Startup
     {
         services.AddControllers();
 
-        // Add DbContext to the DI container
         services.AddDbContext<MyDbContext>(options =>
-            options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            options.UseMySql(Configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33))));
+
+        services.AddSingleton(new Dictionary<string, Type>
+    {
+        { "User", typeof(User) },
+        { "Role", typeof(Role) }
+    });
 
         services.AddSingleton<IEmailService, EmailService>();
-        services.AddSingleton<IDatabaseOperations, DatabaseOperations>();
+        services.AddScoped<IDatabaseOperations, DatabaseOperations>();
         services.AddSingleton<ICommandParser, CommandParser>();
     }
+
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {

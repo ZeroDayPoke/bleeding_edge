@@ -13,17 +13,28 @@ public class EmailService : IEmailService
 
     public void SendVerificationEmail(string email, string token)
     {
-        var fromAddress = new MailAddress(_configuration["EmailSettings:FromEmail"], _configuration["EmailSettings:FromName"]);
-        var toAddress = new MailAddress(email);
+        var fromEmail = _configuration["EmailSettings:FromEmail"];
+        var fromName = _configuration["EmailSettings:FromName"];
         var fromPassword = _configuration["EmailSettings:Password"];
+        var smtpHost = _configuration["EmailSettings:SmtpHost"];
+        var smtpPort = _configuration["EmailSettings:SmtpPort"];
+        var enableSsl = _configuration["EmailSettings:EnableSsl"];
+
+        if (string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(fromName) || string.IsNullOrEmpty(fromPassword) || string.IsNullOrEmpty(smtpHost) || string.IsNullOrEmpty(smtpPort) || string.IsNullOrEmpty(enableSsl))
+        {
+            throw new ArgumentNullException("Email settings in configuration cannot be null or empty.");
+        }
+
+        var fromAddress = new MailAddress(fromEmail, fromName);
+        var toAddress = new MailAddress(email);
         const string subject = "Email Verification";
         string body = $"Your verification token is: {token}";
 
         var smtp = new SmtpClient
         {
-            Host = _configuration["EmailSettings:SmtpHost"],
-            Port = int.Parse(_configuration["EmailSettings:SmtpPort"]),
-            EnableSsl = bool.Parse(_configuration["EmailSettings:EnableSsl"]),
+            Host = smtpHost,
+            Port = int.Parse(smtpPort),
+            EnableSsl = bool.Parse(enableSsl),
             DeliveryMethod = SmtpDeliveryMethod.Network,
             UseDefaultCredentials = false,
             Credentials = new NetworkCredential(fromAddress.Address, fromPassword)

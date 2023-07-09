@@ -24,10 +24,11 @@ public class DatabaseOperations : IDatabaseOperations
 
     public DatabaseOperations(MyDbContext context, IEmailService emailService, Dictionary<string, Type> classDictionary)
     {
-        _context = context;
-        _emailService = emailService;
-        _classDictionary = classDictionary;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _classDictionary = classDictionary ?? throw new ArgumentNullException(nameof(classDictionary));
     }
+
     public async Task CreateAsync(string[] arguments)
     {
         if (arguments.Length < 2)
@@ -252,15 +253,25 @@ public class DatabaseOperations : IDatabaseOperations
 
     public async Task RegisterUserAsync(string username, string password)
     {
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            throw new ArgumentException("Username and password cannot be null or empty.");
+        }
+
         var user = new User { Username = username };
         user.SetPassword(password);
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
-        _emailService.SendVerificationEmail(user.Email, user.VerificationToken);
+        _emailService?.SendVerificationEmail(user.Email, user.VerificationToken);
     }
 
     public async Task<User> LoginUserAsync(string username, string password)
     {
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            throw new ArgumentException("Username and password cannot be null or empty.");
+        }
+
         var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
         if (user != null && user.VerifyPassword(password))
         {
@@ -274,6 +285,11 @@ public class DatabaseOperations : IDatabaseOperations
 
     public async Task<User> VerifyUserAsync(string token)
     {
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new ArgumentException("Token cannot be null or empty.");
+        }
+
         var user = await _context.Users.SingleOrDefaultAsync(u => u.VerificationToken == token);
         if (user != null)
         {
