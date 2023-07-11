@@ -28,7 +28,7 @@ public class Startup
             x.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["Jwt:Key"] ?? string.Empty)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["JwtSettings:Key"] ?? string.Empty)),
                 ValidateIssuer = false,
                 ValidateAudience = false
             };
