@@ -85,7 +85,7 @@ public class DatabaseOperations : IDatabaseOperations
                 _context.SaveChanges();
 
                 // If a User was created, send the verification email
-                if (instance is User user)
+                if (instance is User user && user.Email != null)
                     try
                     {
                         _emailService.SendVerificationEmail(user.Email, user.VerificationToken);

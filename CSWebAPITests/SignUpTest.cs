@@ -14,7 +14,7 @@ public class SignUpTest
         controller.ModelState.AddModelError("error", "some error");
 
         // Act
-        var result = await controller.SignUp(null);
+        var result = await controller.SignUp(null!);
 
         // Assert
         Assert.IsType<BadRequestResult>(result);

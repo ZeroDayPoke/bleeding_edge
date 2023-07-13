@@ -7,11 +7,11 @@ public class UserControllerTests : IClassFixture<WebApplicationFactory<Startup>>
 {
     private readonly WebApplicationFactory<Startup> _factory;
     private HttpClient _client;
-    private User _testUser;
+    private User? _testUser;
 
     public UserControllerTests(WebApplicationFactory<Startup> factory)
     {
-        _factory = factory;
+        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         _client = _factory.CreateClient();
         InitializeAsync().Wait();
     }
@@ -31,19 +31,23 @@ public class UserControllerTests : IClassFixture<WebApplicationFactory<Startup>>
             throw new Exception($"Failed to create test user: {response.StatusCode}");
         }
 
-        _testUser = JsonConvert.DeserializeObject<User>(await response.Content.ReadAsStringAsync());
+        var responseContent = await response.Content.ReadAsStringAsync();
+        _testUser = JsonConvert.DeserializeObject<User>(responseContent) ?? throw new Exception("Failed to deserialize test user.");
     }
 
 
     public async void Dispose()
     {
-        var response = await _client.GetAsync($"/api/User/{_testUser.Id}");
-        Console.WriteLine(response.Content);
-        if (response.IsSuccessStatusCode)
+        if (_testUser != null)
         {
-            response = await _client.DeleteAsync($"/api/User/{_testUser.Id}");
+            var response = await _client.GetAsync($"/api/User/{_testUser.Id}");
+            Console.WriteLine(response.Content);
+            if (response.IsSuccessStatusCode)
+            {
+                response = await _client.DeleteAsync($"/api/User/{_testUser.Id}");
+            }
+            Console.WriteLine("NO USER NO MORE");
         }
-        Console.WriteLine("NO USER NO MORE");
     }
 
     [Fact]

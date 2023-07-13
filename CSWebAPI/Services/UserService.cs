@@ -37,7 +37,11 @@ public class UserService : IUserService
 
     public async Task<List<User>> GetAllUsersAsync()
     {
-        return await _context.Users?.ToListAsync() ?? new List<User>();
+        if (_context.Users != null)
+        {
+            return await _context.Users.ToListAsync() ?? new List<User>();
+        }
+        return new List<User>();
     }
 
     public async Task<User?> GetUserAsync(int userId)
@@ -70,23 +74,29 @@ public class UserService : IUserService
 
     public async Task UpdateUserAsync(User user)
     {
-        var existingUser = await _context.Users?.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
-        if (existingUser != null)
+        if (_context.Users != null)
         {
-            user.PasswordHash = existingUser.PasswordHash;
-            _context.Entry(user).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var existingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
+            if (existingUser != null)
+            {
+                user.PasswordHash = existingUser.PasswordHash;
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 
     public async Task DeleteUserAsync(int id)
     {
-        var user = await _context.Users.FindAsync(id);
-
-        if (user != null)
+        if (_context.Users != null)
         {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            var user = await _context.Users.FindAsync(id);
+
+            if (user != null)
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 
