@@ -1,5 +1,6 @@
-// Controllers/UserController.cs
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -68,7 +69,6 @@ public class UserController : ControllerBase
         return CreatedAtAction(nameof(GetUserById), new { id = newUser.Id }, newUser);
     }
 
-
     // PUT: api/User/5
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(int id, [FromBody] User user)
@@ -94,12 +94,6 @@ public class UserController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Ensure the user is changing their own password
-        // if (User.Identity == null || User.Identity.Name == null || User.Identity.Name != id.ToString())
-        // {
-        //    return Forbid();
-        // }
-
         var result = await _userService.ChangeUserPasswordAsync(id, changePasswordModel);
         if (!result)
         {
@@ -118,14 +112,12 @@ public class UserController : ControllerBase
             return BadRequest();
         }
 
-        // Check if the username already exists
         var existingUser = await _userService.GetUserByUsernameAsync(signUpModel.Username);
         if (existingUser != null)
         {
             return Conflict("Username already exists");
         }
 
-        // Create a new user object
         User user = new User
         {
             Username = signUpModel.Username,
@@ -139,7 +131,6 @@ public class UserController : ControllerBase
             return BadRequest();
         }
 
-        // Generate a JWT for the new user and return it
         var token = await _userService.AuthenticateAsync(signUpModel.Username, signUpModel.Password);
         if (token == null)
         {
@@ -163,5 +154,65 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
         return Ok(new { token });
+    }
+
+    // PUT: api/User/{id}/Favorite/{strainId}
+    [HttpPut("{id}/Favorite/{strainId}")]
+    public async Task<IActionResult> AddFavoriteStrain(int id, int strainId)
+    {
+        await _userService.AddFavoriteStrainAsync(id, strainId);
+        return Ok();
+    }
+
+    // DELETE: api/User/{id}/Favorite/{strainId}
+    [HttpDelete("{id}/Favorite/{strainId}")]
+    public async Task<IActionResult> RemoveFavoriteStrain(int id, int strainId)
+    {
+        await _userService.RemoveFavoriteStrainAsync(id, strainId);
+        return NoContent();
+    }
+
+    // GET: api/User/{id}/Favorites
+    [HttpGet("{id}/Favorites")]
+    public async Task<ActionResult<List<int>>> GetFavoriteStrains(int id)
+    {
+        var strains = await _userService.GetFavoriteStrainsAsync(id);
+        if (strains == null)
+        {
+            return NotFound();
+        }
+        return strains;
+    }
+
+    // POST: api/User/RequestResetPassword
+    [HttpPost("RequestResetPassword")]
+    public async Task<IActionResult> RequestResetPassword([FromBody] ResetPasswordRequestModel model)
+    {
+        await _userService.RequestPasswordResetAsync(model.Email);
+        return Ok();
+    }
+
+    // PUT: api/User/ResetPassword/{token}
+    [HttpPut("ResetPassword/{token}")]
+    public async Task<IActionResult> ResetPassword(string token, [FromBody] ResetPasswordModel model)
+    {
+        await _userService.ResetPasswordAsync(token, model.Password);
+        return Ok();
+    }
+
+    // POST: api/User/RequestVerificationEmail
+    [HttpPost("RequestVerificationEmail")]
+    public async Task<IActionResult> RequestVerificationEmail([FromBody] VerificationEmailRequestModel model)
+    {
+        await _userService.RequestEmailVerificationAsync(model.Email);
+        return Ok();
+    }
+
+    // PUT: api/User/VerifyEmail/{token}
+    [HttpPut("VerifyEmail/{token}")]
+    public async Task<IActionResult> VerifyEmail(string token)
+    {
+        await _userService.VerifyEmailAsync(token);
+        return Ok();
     }
 }

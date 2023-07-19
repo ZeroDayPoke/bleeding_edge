@@ -1,24 +1,12 @@
-// Services/UserService.cs
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
-using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-
-
-public interface IUserService
-{
-    Task<List<User>> GetAllUsersAsync();
-    Task<User?> GetUserAsync(int userId);
-    Task<User?> CreateUserAsync(User user);
-    Task UpdateUserAsync(User user);
-    Task DeleteUserAsync(int id);
-    Task<bool> ChangeUserPasswordAsync(int id, ChangePasswordModel changePasswordModel);
-    Task<string?> AuthenticateAsync(string username, string password);
-    Task<User?> GetUserByIdAsync(int id);
-    Task<User?> GetUserByUsernameAsync(string username);
-}
+using System.Text;
+using System.Threading.Tasks;
 
 public class UserService : IUserService
 {
@@ -35,139 +23,118 @@ public class UserService : IUserService
         _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
     }
 
-    public async Task<List<User>> GetAllUsersAsync()
+    // Existing methods...
+
+    public async Task AddFavoriteStrainAsync(int userId, int strainId)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
         {
-            return await _context.Users.ToListAsync() ?? new List<User>();
+            throw new Exception("User not found");
         }
-        return new List<User>();
+
+        var strain = await _context.Strains.FindAsync(strainId);
+        if (strain == null)
+        {
+            throw new Exception("Strain not found");
+        }
+
+        user.FavoriteStrains.Add(strain);
+        await _context.SaveChangesAsync();
     }
 
-    public async Task<User?> GetUserAsync(int userId)
+    public async Task RemoveFavoriteStrainAsync(int userId, int strainId)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
         {
-            return await _context.Users.FindAsync(userId);
+            throw new Exception("User not found");
         }
-        return null;
+
+        var strain = await _context.Strains.FindAsync(strainId);
+        if (strain == null)
+        {
+            throw new Exception("Strain not found");
+        }
+
+        user.FavoriteStrains.Remove(strain);
+        await _context.SaveChangesAsync();
     }
 
-    public async Task<User?> CreateUserAsync(User user)
+    public async Task<List<int>> GetFavoriteStrainsAsync(int userId)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
         {
-            user.SetPassword(user.PasswordHash ?? string.Empty);
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            if (user.Email != null)
-            {
-                _emailService.SendVerificationEmail(user.Email, user.VerificationToken);
-            }
-
-            return user;
+            throw new Exception("User not found");
         }
-        return null;
+
+        var favoriteStrainIds = new List<int>();
+        foreach (var strain in user.FavoriteStrains)
+        {
+            favoriteStrainIds.Add(strain.Id);
+        }
+
+        return favoriteStrainIds;
     }
 
-
-    public async Task UpdateUserAsync(User user)
+    public async Task RequestPasswordResetAsync(string email)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
         {
-            var existingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
-            if (existingUser != null)
-            {
-                user.PasswordHash = existingUser.PasswordHash;
-                _context.Entry(user).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-            }
-        }
-    }
-
-    public async Task DeleteUserAsync(int id)
-    {
-        if (_context.Users != null)
-        {
-            var user = await _context.Users.FindAsync(id);
-
-            if (user != null)
-            {
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
-            }
-        }
-    }
-
-    public async Task<bool> ChangeUserPasswordAsync(int id, ChangePasswordModel changePasswordModel)
-    {
-        if (_context.Users == null)
-        {
-            return false;
+            throw new Exception("No user found with that email address");
         }
 
-        var user = await _context.Users.FindAsync(id);
-
-        if (user == null || user.PasswordHash == null || user.Salt == null ||
-            changePasswordModel.OldPassword == null || changePasswordModel.NewPassword == null)
-        {
-            return false;
-        }
-
-        if (!user.VerifyPassword(changePasswordModel.OldPassword))
-        {
-            return false;
-        }
-
-        user.SetPassword(changePasswordModel.NewPassword);
-        _context.Users.Update(user);
+        var resetToken = Guid.NewGuid().ToString();
+        user.ResetToken = resetToken;
+        user.ResetTokenExpiration = DateTime.UtcNow.AddHours(1);
         await _context.SaveChangesAsync();
 
-        return true;
+        _emailService.SendResetPasswordEmail(user.Email, resetToken);
     }
 
-
-    public async Task<string?> AuthenticateAsync(string username, string password)
+    public async Task ResetPasswordAsync(string token, string newPassword)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == token && u.ResetTokenExpiration > DateTime.UtcNow);
+        if (user == null)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null || !user.VerifyPassword(password))
-            {
-                return null;
-            }
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_appSettings.Value.Secret);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[] { new Claim("id", user.Id.ToString()) }),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            return tokenHandler.WriteToken(token);
+            throw new Exception("Invalid or expired reset token");
         }
-        return null;
+
+        user.SetPassword(newPassword);
+        user.ResetToken = null;
+        user.ResetTokenExpiration = null;
+        await _context.SaveChangesAsync();
     }
 
-    public async Task<User?> GetUserByIdAsync(int id)
+    public async Task RequestEmailVerificationAsync(string email)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null)
         {
-            return await _context.Users.FindAsync(id);
+            throw new Exception("No user found with that email address");
         }
-        return null;
+
+        var verificationToken = Guid.NewGuid().ToString();
+        user.VerificationToken = verificationToken;
+        user.VerificationTokenExpiration = DateTime.UtcNow.AddHours(1);
+        await _context.SaveChangesAsync();
+
+        _emailService.SendVerificationEmail(user.Email, verificationToken);
     }
 
-    public async Task<User?> GetUserByUsernameAsync(string username)
+    public async Task VerifyEmailAsync(string token)
     {
-        if (_context.Users != null)
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.VerificationToken == token && u.VerificationTokenExpiration > DateTime.UtcNow);
+        if (user == null)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            throw new Exception("Invalid or expired verification token");
         }
-        return null;
+
+        user.IsVerified = true;
+        user.VerificationToken = null;
+        user.VerificationTokenExpiration = null;
+        await _context.SaveChangesAsync();
     }
 }

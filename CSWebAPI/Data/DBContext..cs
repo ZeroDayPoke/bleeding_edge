@@ -10,6 +10,9 @@ public class MyDbContext : DbContext
     public DbSet<User>? Users { get; set; }
     public DbSet<Role>? Roles { get; set; }
     public DbSet<UserRole>? UserRoles { get; set; }
+    public DbSet<Strain>? Strains { get; set; }
+    public DbSet<Store>? Stores { get; set; }
+    public DbSet<Review>? Reviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +32,30 @@ public class MyDbContext : DbContext
             .HasOne(ur => ur.Role)
             .WithMany(r => r.UserRoles)
             .HasForeignKey(ur => ur.RoleId);
+
+        // Strain to Store relationship
+        modelBuilder.Entity<Strain>()
+            .HasMany(s => s.Stores)
+            .WithMany(st => st.Strains)
+            .UsingEntity(j => j.ToTable("StrainStore"));
+
+        // Strain to Review relationship
+        modelBuilder.Entity<Strain>()
+            .HasMany(s => s.Reviews)
+            .WithOne(r => r.Strain)
+            .HasForeignKey(r => r.StrainId);
+
+        // Store to Review relationship
+        modelBuilder.Entity<Store>()
+            .HasMany(s => s.Reviews)
+            .WithOne(r => r.Store)
+            .HasForeignKey(r => r.StoreId);
+
+        // User to Strain relationship
+        modelBuilder.Entity<User>()
+            .HasMany(u => u.Strains)
+            .WithOne(s => s.User)
+            .HasForeignKey(s => s.UserId);
     }
 }
 
